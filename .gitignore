@@ -160,3 +160,5 @@ cython_debug/
 #.idea/
 /.project
 /.pydevproject
+/greystone_app.db
+/test.db

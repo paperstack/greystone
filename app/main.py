@@ -2,8 +2,12 @@ from fastapi import Depends, FastAPI
 from fastapi.exceptions import HTTPException
 from sqlalchemy.orm.session import Session
 
-from app.database import SessionLocal
+from app import models
+from app.database import engine, SessionLocal 
 from app.logic.ping_db import ping_db
+
+#TODO: Implement Alembic migrations
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
