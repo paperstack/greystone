@@ -24,7 +24,7 @@ class User(Base):
     first_name = Column(String)
     last_name = Column(String)
     loans: Mapped[List[Loan]] = relationship(
-        secondary=association_table, back_populates="loans"
+        secondary=association_table, backref="loans"
     )
 
 class Loan(Base):
@@ -35,7 +35,7 @@ class Loan(Base):
     term = Column(Integer)
     interest_rate = Column(Float)
     parents: Mapped[List[User]] = relationship(
-        secondary=association_table, back_populates="users"
+        secondary=association_table, backref="users"
     )
 
 
@@ -47,6 +47,6 @@ class LoanMonth(Base):
     principle_amount = Column(Numeric(scale=2))
     interest_amount = Column(Numeric(scale=2))
     loan_id = Column(Integer, ForeignKey("loans.id"))
-    loan = relationship("Loan", back_populates="loan_months")
+    loan = relationship("Loan", backref="loan_months")
     __table_args__ = (UniqueConstraint('loan_id', 'month', name='_loan_month_uc'),
                      )
