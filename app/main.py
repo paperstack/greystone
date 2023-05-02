@@ -2,9 +2,10 @@ from fastapi import Depends, FastAPI
 from fastapi.exceptions import HTTPException
 from sqlalchemy.orm.session import Session
 
-from app import models
+from app import models, schemas
 from app.database import engine, SessionLocal 
 from app.logic.ping_db import ping_db
+from app.logic.user import get_user_by_email, create_user
 
 #TODO: Implement Alembic migrations
 models.Base.metadata.create_all(bind=engine)
@@ -26,3 +27,9 @@ def health_check(db: Session = Depends(get_db)):
     else:
         raise HTTPException(status_code=400, detail="No Database Connection")
 
+@app.post("/users/", response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    return create_user(db=db, user=user)
