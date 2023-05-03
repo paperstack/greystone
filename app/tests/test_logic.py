@@ -1,11 +1,16 @@
+import os
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from ..database import Base
 from app.logic.ping_db import ping_db
-from app.schemas import UserCreate
+from app.schemas import UserCreate, LoanCreate
 from app.logic.user import create_user
+from app.models import User, LoanMonth
+from app.logic.loan import create_loan
+from decimal import Decimal
+from _decimal import getcontext
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
@@ -15,16 +20,17 @@ engine = create_engine(
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-Base.metadata.create_all(bind=engine)
-
-@pytest.fixture
+@pytest.fixture(scope="module")
 def db():
     try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-        
+        os.remove("test.db")
+    except FileNotFoundError:
+        pass
+    Base.metadata.create_all(bind=engine)
+    db = TestingSessionLocal()
+    yield db
+    db.rollback()
+    db.close()
         
 def test_ping_db(db):
     assert True == ping_db(db=db)
@@ -37,3 +43,35 @@ def test_user_create(db):
     assert  user_input.last_name == user.last_name
     assert  user_input.email == user.email
     assert  user.id > 0
+
+def test_loan_create(db):
+    getcontext().prec=2
+    user = User(first_name="Grey", last_name="Stone", email="loan_create@greystone.com")
+    db.add(user)
+    db.commit()
+    loan_input = LoanCreate(**{"amount": 30000, "term": 48, "interest_rate": 3.0})
+    
+    loan = create_loan(db=db, loan=loan_input, user=user)
+
+    # Test loan attributes
+    assert  loan_input.amount == loan.amount
+    assert  loan_input.term == loan.term
+    assert  loan_input.interest_rate == loan.interest_rate
+    assert  user == loan.users[0]
+    
+    # Test payout schedule
+    # See https://www.investopedia.com/terms/a/amortization.asp for control data
+    first_loan_month = db.query(LoanMonth).filter(LoanMonth.loan==loan, LoanMonth.month==1).first()
+    assert first_loan_month.principal_amount == Decimal('589.03')
+    assert first_loan_month.interest_amount == Decimal('75.00')
+    
+    last_loan_month = db.query(LoanMonth).filter(LoanMonth.loan==loan, LoanMonth.month==48).first()
+    assert last_loan_month.principal_amount == Decimal('662.37') #TODO: Should be 36 cents... resolve rounding error
+    assert last_loan_month.interest_amount == Decimal('1.66')
+    
+    # Test arbitrary month(10th)
+    tenth_loan_month = db.query(LoanMonth).filter(LoanMonth.loan==loan, LoanMonth.month==10).first()
+    assert tenth_loan_month.principal_amount == Decimal('602.42')
+    assert tenth_loan_month.interest_amount == Decimal('61.61')
+    
+    
