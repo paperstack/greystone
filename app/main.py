@@ -6,7 +6,7 @@ from app import models, schemas
 from app.database import engine, SessionLocal 
 from app.logic.ping_db import ping_db
 from app.logic.user import get_user_by_email, create_user, get_user_loans
-from app.logic.loan import create_loan
+from app.logic.loan import create_loan, get_loan, share_loan
 
 #TODO: Implement Alembic migrations
 models.Base.metadata.create_all(bind=engine)
@@ -28,7 +28,7 @@ def health_check(db: Session = Depends(get_db)):
     else:
         raise HTTPException(status_code=400, detail="No Database Connection")
 
-@app.post("/users/", response_model=schemas.User)
+@app.post("/users/", response_model=schemas.User, status_code=201)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = get_user_by_email(db, email=user.email)
     if db_user:
@@ -42,7 +42,7 @@ def get_user_loans(email: str, db: Session = Depends(get_db)) -> list[schemas.Us
         raise HTTPException(status_code=404, detail="User not found")
     return get_user_loans(db=db, user=db_user)
 
-@app.post("/loans/{email}/", response_model=schemas.Loan)
+@app.post("/loans/{email}/", response_model=schemas.Loan, status_code=201)
 def create_loan(loan: schemas.LoanCreate, email: str, db: Session = Depends(get_db)):
     db_user = get_user_by_email(db, email=email)
     if not db_user:
@@ -64,3 +64,13 @@ def get_month_summary(id: int, month: int, db: Session = Depends(get_db)) ->sche
     if result["principal_balance"] is None:
         raise HTTPException(status_code=404, detail="Requested month not found")
     return result
+
+@app.patch("/loans/{id}/share/{email}/")
+def share_loan(id: int, email: str, db: Session = Depends(get_db)):
+    db_user = get_user_by_email(db, email=email)
+    db_loan = get_loan(db=db, id=id)
+    if db_loan is None:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    share_loan(db=db, user=db_user, loan=db_loan)

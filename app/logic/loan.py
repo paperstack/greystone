@@ -61,6 +61,19 @@ def get_month_summary(db: Session, loan_id: int, month: int):
         result = {"principal_balance": principal_balance, "principal_paid": principal_paid, "interest_paid": interest_paid}
     return result
 
+def get_loan(db: Session, id: int):
+    """
+    Gets a loan by primary key
+    """
+    return db.get(Loan, id)
+
+def share_loan(db: Session, loan: Loan, user: User):
+    """
+    Gives the provided user access to the provided loan
+    """
+    loan.users.append(user)
+    db.commit()
+
 def _create_amoritization_schedule(loan:Loan):
     result = []
     payout_schedule = generate_amoritization_schedule(interest=loan.interest_rate, term=loan.term, principal=loan.amount)
