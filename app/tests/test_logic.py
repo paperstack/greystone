@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from ..database import Base
 from app.logic.ping_db import ping_db
 from app.schemas import UserCreate, LoanCreate
-from app.logic.user import create_user
+from app.logic.user import create_user, get_user_loans
 from app.models import User, LoanMonth, Loan
 from app.logic.loan import create_loan, get_loan_schedule, get_month_summary
 from decimal import Decimal
@@ -39,6 +39,19 @@ def loan():
     loan.loan_months.append(LoanMonth(month=2, principal_amount=200, interest_amount=100))
     return loan
    
+@pytest.fixture(scope="module")
+def user_loans():
+    loan = Loan(term=36, interest_rate=3.5, amount=300)
+    loan.loan_months.append(LoanMonth(month=1, principal_amount=100, interest_amount=200))
+    loan.loan_months.append(LoanMonth(month=2, principal_amount=200, interest_amount=100))
+
+    loan_2 = Loan(term=48, interest_rate=2.5, amount=500)
+    loan_2.loan_months.append(LoanMonth(month=1, principal_amount=200, interest_amount=300))
+    loan_2.loan_months.append(LoanMonth(month=2, principal_amount=300, interest_amount=200))
+
+    user = User(email='test@test.com', first_name="Test", last_name="McTest", loans=[loan, loan_2])
+    return user
+
 def test_ping_db(db):
     assert True == ping_db(db=db)
     
@@ -136,3 +149,11 @@ def test_get_month_summary_no_month(db, loan):
     db.refresh(loan)
     month_summary = get_month_summary(db=db, loan_id=loan.id, month=3)
     assert month_summary["principal_balance"] is None
+
+def test_get_user_loans(db, user_loans):
+    db.add(user_loans)
+    db.commit()
+    db.refresh(user_loans)
+    loans = get_user_loans(db=db, user=user_loans)
+    assert len(loans) == 2
+    assert loans[0] != loans[1]

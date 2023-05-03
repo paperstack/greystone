@@ -5,7 +5,7 @@ from sqlalchemy.orm.session import Session
 from app import models, schemas
 from app.database import engine, SessionLocal 
 from app.logic.ping_db import ping_db
-from app.logic.user import get_user_by_email, create_user
+from app.logic.user import get_user_by_email, create_user, get_user_loans
 from app.logic.loan import create_loan
 
 #TODO: Implement Alembic migrations
@@ -34,6 +34,13 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     return create_user(db=db, user=user)
+
+@app.get("/users/{email}/loans/")
+def get_user_loans(email: str, db: Session = Depends(get_db)) -> list[schemas.UserLoan]:
+    db_user = get_user_by_email(db, email=email)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return get_user_loans(db=db, user=db_user)
 
 @app.post("/loans/{email}/", response_model=schemas.Loan)
 def create_loan(loan: schemas.LoanCreate, email: str, db: Session = Depends(get_db)):
