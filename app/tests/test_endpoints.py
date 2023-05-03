@@ -86,3 +86,24 @@ def test_fetch_loan_schedule_no_loan(mocker):
     response = client.get("/loans/1/schedule")
     assert response.status_code == 404
     assert response.json() == {"detail": "Loan not found"}
+
+def test_fetch_month_summary(mocker):
+    month_summary = {"principal_balance": 1000, "principal_paid": 900, "interest_paid": 800}
+    mocker.patch("app.main.get_month_summary", return_value=month_summary)
+    response = client.get("/loans/1/month/1/")
+    assert response.status_code == 200
+    assert response.json() == month_summary
+
+def test_fetch_month_summary_no_loan(mocker):
+    month_summary = None
+    mocker.patch("app.main.get_month_summary", return_value=month_summary)
+    response = client.get("/loans/1/month/1/")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Loan not found"}
+    
+def test_fetch_month_summary_no_month(mocker):
+    month_summary = {"principal_balance": None, "principal_paid": 900, "interest_paid": 800}
+    mocker.patch("app.main.get_month_summary", return_value=month_summary)
+    response = client.get("/loans/1/month/1/")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Requested month not found"}    

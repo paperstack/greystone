@@ -48,3 +48,12 @@ def get_loan_schedule(id: int, db: Session = Depends(get_db)) -> list[schemas.Sc
     if result is None:
         raise HTTPException(status_code=404, detail="Loan not found")
     return result
+
+@app.get("/loans/{id}/month/{month}/")
+def get_month_summary(id: int, month: int, db: Session = Depends(get_db)) ->schemas.MonthSummary:
+    result = get_month_summary(db=db, loan_id=id, month=month)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    if result["principal_balance"] is None:
+        raise HTTPException(status_code=404, detail="Requested month not found")
+    return result
