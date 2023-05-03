@@ -46,7 +46,7 @@ def test_create_new_user(mocker, user):
     mocker.patch("app.main.create_user", return_value=user)
     response = client.post("/users/", json={"first_name":"Grey", "last_name": "Stone", "email":"test@test.com"})
     
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json() == {'email': 'test@test.com', 'first_name': 'Grey', 'id': 1, 'last_name': 'Stone', "loans": []}
     
 def test_create_new_user_email_exists(mocker, user):
@@ -59,7 +59,7 @@ def test_create_new_loan(mocker, user, loan):
     mocker.patch("app.main.get_user_by_email", return_value=user)
     mocker.patch("app.main.create_loan", return_value=loan)
     response = client.post("/loans/test@test.com", json={"term": 36, "interest_rate": 3.5, "amount": 20000})
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json() == {"id": 1, "term": 36, "interest_rate": 3.5, "amount": 20000, "loan_months": [{'id': 1, 'interest_amount': 100.0, 'month': 1, 'principal_amount': 200.0}], "users": []}
 
 def test_create_new_loan_no_user(mocker, loan):
@@ -128,3 +128,26 @@ def test_user_loans_no_user(mocker, loan, loan_2):
     response = client.get("/users/test@test.com/loans/")
     assert response.status_code == 404
     assert response.json() == {"detail": "User not found"}    
+
+def test_share_loan(mocker, user, loan):
+    mocker.patch("app.main.get_user_by_email", return_value=user)
+    mocker.patch("app.main.get_loan", return_value=loan)
+    mocker.patch("app.main.share_loan", return_value=None)
+    response = client.patch("/loans/1/share/test@test.com/")
+    assert response.status_code == 200
+
+def test_share_loan_no_user(mocker, loan):
+    mocker.patch("app.main.get_user_by_email", return_value=None)
+    mocker.patch("app.main.get_loan", return_value=loan)
+    mocker.patch("app.main.share_loan", return_value=None)
+    response = client.patch("/loans/1/share/test@test.com/")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "User not found"}    
+
+def test_share_loan_no_loan(mocker, user):
+    mocker.patch("app.main.get_user_by_email", return_value=user)
+    mocker.patch("app.main.get_loan", return_value=None)
+    mocker.patch("app.main.share_loan", return_value=None)
+    response = client.patch("/loans/1/share/test@test.com/")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Loan not found"}    

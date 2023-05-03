@@ -8,7 +8,8 @@ from app.logic.ping_db import ping_db
 from app.schemas import UserCreate, LoanCreate
 from app.logic.user import create_user, get_user_loans
 from app.models import User, LoanMonth, Loan
-from app.logic.loan import create_loan, get_loan_schedule, get_month_summary
+from app.logic.loan import create_loan, get_loan_schedule, get_month_summary,\
+    share_loan
 from decimal import Decimal
 from _decimal import getcontext
 
@@ -39,6 +40,16 @@ def loan():
     loan.loan_months.append(LoanMonth(month=2, principal_amount=200, interest_amount=100))
     return loan
    
+@pytest.fixture(scope="module")
+def user():
+    user = User(email='test@test.com', first_name="Test", last_name="McTest")
+    return user
+
+@pytest.fixture(scope="module")
+def user_2():
+    user = User(email='test2@test.com', first_name="Test", last_name="McTest")
+    return user
+
 @pytest.fixture(scope="module")
 def user_loans():
     loan = Loan(term=36, interest_rate=3.5, amount=300)
@@ -157,3 +168,22 @@ def test_get_user_loans(db, user_loans):
     loans = get_user_loans(db=db, user=user_loans)
     assert len(loans) == 2
     assert loans[0] != loans[1]
+
+def test_share_loan(db, user, user_2, loan):
+    loan.users.append(user)
+    db.add(loan)
+    db.add(user_2)
+    db.commit()
+    db.refresh(loan)
+    db.refresh(user)
+    db.refresh(user_2)
+
+    # Starting state sanity check
+    assert len(loan.users) == 1
+    assert loan.users[0] == user
+    
+    share_loan(db, loan, user_2)
+    
+    assert len(loan.users) == 2
+    assert loan.users[0] != loan.users[1]
+    

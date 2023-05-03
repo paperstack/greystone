@@ -15,5 +15,20 @@ In the project root directory execute: `uvicorn app.main:app --reload`
 ### health_check
 Executes a basic DB query to ensure the health of the service. Should return 200/Status:Ok if the service is functional.
 
-### users
+### /users/
 User related endpoints (currently create only)
+
+### /users/{email}/loans/
+Retrieve loans belonging to a given user identified by email
+
+### /loans/{email}/
+Create loan for an existing user
+
+### /loans/{id}/schedule/
+Retrieve a payout schedule for a given loan
+
+### /loans/{id}/month/{month}/
+Retrieve a summary for a given month of a loan
+
+### /loans/{id}/share/{email}/
+Associates a loan with a given user
