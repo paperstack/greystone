@@ -41,6 +41,12 @@ class Loan(LoanBase):
     users: list[User] = []
     class Config:
         orm_mode = True
+
+class UserLoan(LoanBase):
+    id: int
+    loan_months: list[LoanMonth] = []
+    class Config:
+        orm_mode = True
         
 class ScheduleItem(BaseModel):
     month: int = Field(gt=0, description="The month must be greater than zero")

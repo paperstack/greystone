@@ -11,3 +11,9 @@ def create_user(db: Session, user: schemas.UserCreate):
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email==email).first()
+
+def get_user_loans(db: Session, user: User):
+    """
+    Returns all the loans associated with a given user
+    """
+    return user.loans

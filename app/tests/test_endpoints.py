@@ -17,6 +17,12 @@ def loan():
     return loan
 
 @pytest.fixture(scope="module")
+def loan_2():
+    loan = Loan(id=2, term=48, interest_rate=2.5, amount=30000)
+    loan.loan_months.append(LoanMonth(id=2, month=1, principal_amount=300, interest_amount=200))
+    return loan
+
+@pytest.fixture(scope="module")
 def loan_schedule():
     result = []
     result.append({"month": 1, "remaining_balance": 300, "monthly_payment": 100})
@@ -107,3 +113,18 @@ def test_fetch_month_summary_no_month(mocker):
     response = client.get("/loans/1/month/1/")
     assert response.status_code == 404
     assert response.json() == {"detail": "Requested month not found"}    
+
+def test_user_loans(mocker, user, loan, loan_2):
+    mocker.patch("app.main.get_user_by_email", return_value=user)
+    mocker.patch("app.main.get_user_loans", return_value=[loan, loan_2])
+    response = client.get("/users/test@test.com/loans/")
+    assert response.status_code == 200
+    assert response.json() == [{"id": 1, "term": 36, "interest_rate": 3.5, "amount": 20000, "loan_months": [{'id': 1, 'interest_amount': 100.0, 'month': 1, 'principal_amount': 200.0}]},
+                               {"id": 2, "term": 48, "interest_rate": 2.5, "amount": 30000, "loan_months": [{'id': 2, 'interest_amount': 200.0, 'month': 1, 'principal_amount': 300.0}]}]
+
+def test_user_loans_no_user(mocker, loan, loan_2):
+    mocker.patch("app.main.get_user_by_email", return_value=None)
+    mocker.patch("app.main.get_user_loans", return_value=[loan, loan_2])
+    response = client.get("/users/test@test.com/loans/")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "User not found"}    
