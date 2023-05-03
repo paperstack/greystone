@@ -42,4 +42,10 @@ class Loan(LoanBase):
     class Config:
         orm_mode = True
         
+class ScheduleItem(BaseModel):
+    month: int = Field(gt=0, description="The month must be greater than zero")
+    remaining_balance: float = Field(ge=0, description="The remaining balance cannot be negative")
+    monthly_payment: float = Field(gt=0, description="The monthly payment must be greater than zero")
+
+        
 User.update_forward_refs()

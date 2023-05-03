@@ -37,7 +37,8 @@ class Loan(Base):
     users: Mapped[List[User]] = relationship(
         secondary=association_table, back_populates="loans"
     )
-
+    loan_months = relationship("LoanMonth", back_populates="loan", order_by="LoanMonth.month")
+    
 class LoanMonth(Base):
     __tablename__ = "loan_months"
 
@@ -46,6 +47,6 @@ class LoanMonth(Base):
     principal_amount = Column(Numeric(scale=2))
     interest_amount = Column(Numeric(scale=2))
     loan_id = Column(Integer, ForeignKey("loans.id"))
-    loan = relationship("Loan", backref="loan_months")
+    loan = relationship("Loan", back_populates="loan_months")
     __table_args__ = (UniqueConstraint('loan_id', 'month', name='_loan_month_uc'),
                      )
