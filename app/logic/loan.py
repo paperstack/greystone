@@ -2,6 +2,7 @@ from sqlalchemy.orm.session import Session
 from app import schemas
 from app.models import User, Loan, LoanMonth
 from app.logic.common import generate_amoritization_schedule
+from decimal import Decimal
 
 
 def create_loan(db: Session, loan: schemas.LoanCreate, user: User):
@@ -14,6 +15,18 @@ def create_loan(db: Session, loan: schemas.LoanCreate, user: User):
     db.commit()
     db.refresh(_loan)
     return _loan
+
+def get_loan_schedule(db: Session, loan_id: int):
+    result = None
+    loan: Loan = db.get(Loan, loan_id)
+    if loan:
+        result = []
+        remaining_balance = Decimal(loan.amount)
+        for loan_month in loan.loan_months:
+            remaining_balance -= loan_month.principal_amount
+            monthly_payment = loan_month.principal_amount + loan_month.interest_amount
+            result.append({"month": loan_month.month, "remaining_balance": remaining_balance, "monthly_payment": monthly_payment})
+    return result
 
 def _create_amoritization_schedule(loan:Loan):
     result = []

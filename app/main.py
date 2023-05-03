@@ -39,5 +39,12 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 def create_loan(loan: schemas.LoanCreate, email: str, db: Session = Depends(get_db)):
     db_user = get_user_by_email(db, email=email)
     if not db_user:
-        raise HTTPException(status_code=400, detail="No user for loan found")
+        raise HTTPException(status_code=404, detail="No user for loan found")
     return create_loan(db=db, loan=loan, email=email)
+
+@app.get("/loans/{id}/schedule/")
+def get_loan_schedule(id: int, db: Session = Depends(get_db)) -> list[schemas.ScheduleItem]:
+    result = get_loan_schedule(db=db, loan_id=id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    return result

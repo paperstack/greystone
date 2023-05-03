@@ -7,8 +7,8 @@ from ..database import Base
 from app.logic.ping_db import ping_db
 from app.schemas import UserCreate, LoanCreate
 from app.logic.user import create_user
-from app.models import User, LoanMonth
-from app.logic.loan import create_loan
+from app.models import User, LoanMonth, Loan
+from app.logic.loan import create_loan, get_loan_schedule
 from decimal import Decimal
 from _decimal import getcontext
 
@@ -31,7 +31,14 @@ def db():
     yield db
     db.rollback()
     db.close()
-        
+
+@pytest.fixture(scope="module")
+def loan():
+    loan = Loan(term=36, interest_rate=3.5, amount=300)
+    loan.loan_months.append(LoanMonth(month=1, principal_amount=100, interest_amount=200))
+    loan.loan_months.append(LoanMonth(month=2, principal_amount=200, interest_amount=100))
+    return loan
+   
 def test_ping_db(db):
     assert True == ping_db(db=db)
     
@@ -74,4 +81,26 @@ def test_loan_create(db):
     assert tenth_loan_month.principal_amount == Decimal('602.42')
     assert tenth_loan_month.interest_amount == Decimal('61.61')
     
+def test_get_loan_schedule(db, loan):
+    db.add(loan)
+    db.commit()
+    db.refresh(loan)
+    schedule_items = get_loan_schedule(db=db, loan_id=loan.id)
+    assert len(schedule_items) == 2
     
+    first_month = schedule_items[0]
+    assert first_month["month"] == 1
+    assert first_month["monthly_payment"] == 300
+    assert first_month["remaining_balance"] == 200
+    
+    last_month = schedule_items[1]
+    assert last_month["month"] == 2
+    assert last_month["monthly_payment"] == 300
+    assert last_month["remaining_balance"] == 0
+    
+def test_get_loan_schedule_no_loan(db, loan):
+    db.add(loan)
+    db.commit()
+    db.refresh(loan)
+    loan_months = get_loan_schedule(db=db, loan_id=loan.id + 1)
+    assert loan_months == None
