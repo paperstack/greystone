@@ -8,7 +8,7 @@ from app.logic.ping_db import ping_db
 from app.schemas import UserCreate, LoanCreate
 from app.logic.user import create_user
 from app.models import User, LoanMonth, Loan
-from app.logic.loan import create_loan, get_loan_schedule
+from app.logic.loan import create_loan, get_loan_schedule, get_month_summary
 from decimal import Decimal
 from _decimal import getcontext
 
@@ -104,3 +104,35 @@ def test_get_loan_schedule_no_loan(db, loan):
     db.refresh(loan)
     loan_months = get_loan_schedule(db=db, loan_id=loan.id + 1)
     assert loan_months == None
+
+def test_get_month_summary_for_first_month(db, loan):
+    db.add(loan)
+    db.commit()
+    db.refresh(loan)
+    month_summary = get_month_summary(db=db, loan_id=loan.id, month=1)
+    assert month_summary["principal_balance"] == 200
+    assert month_summary["principal_paid"] == 100
+    assert month_summary["interest_paid"] == 200
+
+def test_get_month_summary_for_last_month(db, loan):
+    db.add(loan)
+    db.commit()
+    db.refresh(loan)
+    month_summary = get_month_summary(db=db, loan_id=loan.id, month=2)
+    assert month_summary["principal_balance"] == 0
+    assert month_summary["principal_paid"] == 300
+    assert month_summary["interest_paid"] == 300
+
+def test_get_month_summary_no_loan(db, loan):
+    db.add(loan)
+    db.commit()
+    db.refresh(loan)
+    month_summary = get_month_summary(db=db, loan_id=loan.id + 1, month=1)
+    assert month_summary is None
+
+def test_get_month_summary_no_month(db, loan):
+    db.add(loan)
+    db.commit()
+    db.refresh(loan)
+    month_summary = get_month_summary(db=db, loan_id=loan.id, month=3)
+    assert month_summary["principal_balance"] is None
